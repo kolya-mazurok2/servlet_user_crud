@@ -10,6 +10,5 @@
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.web.container"/>
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.module.container"/>
 	<classpathentry kind="con" path="org.eclipse.buildship.core.gradleclasspathcontainer"/>
-	<classpathentry kind="lib" path="/home/kolya/java_libs/org.json/org.json.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>

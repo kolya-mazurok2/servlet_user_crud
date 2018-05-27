@@ -25,17 +25,11 @@ public class UserController extends HttpServlet{
 	private UserDAOImpl userDAO;
 	
 	public void init() {
-		//String jdbcURL = getServletContext().getInitParameter("jdbcURL");
-		//String jdbcUsername = getServletContext().getInitParameter("jdbcUsername");
-		//String jdbcPassword = getServletContext().getInitParameter("jdbcPassword");
-		
-		//userDAO = new UserDAOImpl(jdbcURL, jdbcUsername, jdbcPassword);
 		userDAO = new UserDAOImpl();
 	}
 	
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 		throws ServletException, IOException {
-		System.out.println("request: "+request.getServletPath());
 		doGet(request, response);
 	}
 	
@@ -45,19 +39,19 @@ public class UserController extends HttpServlet{
 		try {
 			switch(action) {
 				case "/create":
-					createUser(request, response);
+					createAction(request, response);
 				break;
 				case "/read":
-					readUser(request, response);
+					readAction(request, response);
 				break;
 				case "/update":
-					updateUser(request, response);
+					updateAction(request, response);
 				break;
 				case "/delete":
-					deleteUser(request, response);
+					deleteAction(request, response);
 				break;
 				case "/list":
-					listUser(request, response);
+					getListAction(request, response);
 				break;
 			}
 		}
@@ -66,7 +60,7 @@ public class UserController extends HttpServlet{
 		}
 	}
 	
-	private void createUser(HttpServletRequest request, HttpServletResponse response)
+	private void createAction(HttpServletRequest request, HttpServletResponse response)
 		throws SQLException {
 		StringBuffer sb = new StringBuffer();
 		String line = null;
@@ -95,17 +89,18 @@ public class UserController extends HttpServlet{
 		}
 	}
 	
-	private void readUser(HttpServletRequest request, HttpServletResponse response)
+	private void readAction(HttpServletRequest request, HttpServletResponse response)
 		throws SQLException, IOException {
 		Long id = Long.parseLong(request.getParameter("id"));
-		String json = new JSONObject(userDAO.readUser(id).toJson()).toString();
+		User user = userDAO.readUser(id);
+		String json = objectToJson(user);
 		
 		response.setContentType("application/json");
 		response.setCharacterEncoding("UTF-8");
 		response.getWriter().write(json);
 	}
 	
-	private void updateUser(HttpServletRequest request, HttpServletResponse response)
+	private void updateAction(HttpServletRequest request, HttpServletResponse response)
 		throws SQLException {
 		StringBuffer sb = new StringBuffer();
 		String line = null;
@@ -114,10 +109,55 @@ public class UserController extends HttpServlet{
 			while((line = br.readLine()) != null) {
 				sb.append(line);
 			}
+			User user = jsonToObject(sb);
+			userDAO.updateUser(user);
 		}
 		catch(Exception ex) {
 			ex.printStackTrace();
 		}
+	}
+	
+	private void deleteAction(HttpServletRequest request, HttpServletResponse response)
+		throws SQLException {
+		Long id = Long.parseLong(request.getParameter("id"));
+		
+		userDAO.deleteUser(id);
+	}
+	
+	private void getListAction(HttpServletRequest request, HttpServletResponse response)
+		throws SQLException, IOException {
+		List<User> list = userDAO.listUser();
+		String json = objectsToJson(list);
+		
+		response.setContentType("application/json");
+		response.setCharacterEncoding("UTF-8");
+		response.getWriter().write(json);
+	}
+	
+	private String objectToJson(User user) {
+		JSONObject jsonObj = new JSONObject();
+		jsonObj.put("id", user.getId());
+		jsonObj.put("firstName", user.getFirstName());
+		jsonObj.put("lastName", user.getLastName());
+		jsonObj.put("login", user.getLogin());
+		jsonObj.put("email", user.getEmail());
+		jsonObj.put("password", user.getPassword());
+		
+		return jsonObj.toString();
+	}
+	
+	private String objectsToJson(List<User> list) {
+		String json = "[";
+		for(int i=0; i<list.size(); i++) {
+			json = i != list.size()-1 
+				? json + objectToJson(list.get(i)) + ",\n"
+				: json + objectToJson(list.get(i)) + "]";
+		}
+		
+		return json;
+	}
+	
+	private User jsonToObject(StringBuffer sb) {
 		try {
 			JSONObject jsonObj = new JSONObject(sb.toString());
 			User user = new User(
@@ -128,32 +168,11 @@ public class UserController extends HttpServlet{
 				jsonObj.get("email").toString(),
 				jsonObj.get("password").toString()
 			);
-			userDAO.updateUser(user);
+			return user;
 		}
 		catch(JSONException ex) {
 			ex.printStackTrace();
+			return null;
 		}
-	}
-	
-	private void deleteUser(HttpServletRequest request, HttpServletResponse response)
-		throws SQLException {
-		Long id = Long.parseLong(request.getParameter("id"));
-		
-		userDAO.deleteUser(id);
-	}
-	
-	private void listUser(HttpServletRequest request, HttpServletResponse response)
-		throws SQLException, IOException {
-		List<User> listUser = userDAO.listUser();
-		String json = "[";
-		for(int i=0; i<listUser.size(); i++) {
-			json = i != listUser.size()-1 
-					? json + new JSONObject(listUser.get(i).toJson()).toString() + ",\n"
-					: json + new JSONObject(listUser.get(i).toJson()).toString() + "]";
-		}
-		
-		response.setContentType("application/json");
-		response.setCharacterEncoding("UTF-8");
-		response.getWriter().write(json);
 	}
 }
