@@ -13,31 +13,26 @@ import com.stud.servlet.dao.UserDAO;
 import com.stud.servlet.models.User;
 
 public class UserDAOImpl implements UserDAO {
-	private static final String jdbcURL = "jdbc:mysql://localhost:3306/spring_jdbc?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&useSSL=false";
-	private static final String jdbcUsername = "root";
-	private static final String jdbcPassword = "1";
-	private Connection jdbcConnection;
-	
-	private static final String sqlCreate = "INSERT INTO user "
+	private static final String JDBC_PROPERTY_URL = "jdbc:mysql://localhost:3306/spring_jdbc?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&useSSL=false";
+	private static final String JDBC_PROPERTY_USERNAME = "root";
+	private static final String JDBC_PROPERTY_PASSWORD = "1";
+	private static final String SQL_STATEMENT_CREATE = "INSERT INTO user "
 			+ "(first_name, last_name, login, email, password) "
 			+ "VALUES (?,?,?,?,?)";
-	private static final String sqlRead = "SELECT * FROM user WHERE id = ?";
-	private static final String sqlUpdate = "UPDATE user SET "
+	private static final String SQL_STATEMENT_READ = "SELECT * FROM user WHERE id = ?";
+	private static final String SQL_STATEMENT_UPDATE = "UPDATE user SET "
 			+ "first_name = ?, "
 			+ "last_name = ?, "
 			+ "login = ?, "
 			+ "email = ?, "
 			+ "password = ? "
 			+ "WHERE id = ?";
-	private static final String sqlDelete = "DELETE FROM user  WHERE id = ?";
-	private static final String sqlList = "SELECT * FROM user";
+	private static final String SQL_STATEMENT_DELETE = "DELETE FROM user  WHERE id = ?";
+	private static final String SQL_STATEMENT_GET_LIST = "SELECT * FROM user";
+	
+	private Connection jdbcConnection;
 	
 	public UserDAOImpl() {};
-	/*public UserDAOImpl(String jdbcURL, String jdbcUsername, String jdbcPassword) {
-		this.jdbcURL = jdbcURL;
-		this.jdbcUsername = jdbcUsername;
-		this.jdbcPassword = jdbcPassword;
-	}*/
 	
 	protected void connect() throws SQLException {
 		if(jdbcConnection == null || jdbcConnection.isClosed()) {
@@ -47,7 +42,7 @@ public class UserDAOImpl implements UserDAO {
 			catch (ClassNotFoundException ex) {
 				throw new SQLException(ex);
 			}
-			jdbcConnection = DriverManager.getConnection(jdbcURL, jdbcUsername, jdbcPassword);
+			jdbcConnection = DriverManager.getConnection(JDBC_PROPERTY_URL, JDBC_PROPERTY_USERNAME, JDBC_PROPERTY_PASSWORD);
 		}
 	}
 	
@@ -58,95 +53,138 @@ public class UserDAOImpl implements UserDAO {
 	}
 	
 	public boolean createUser(User user) throws SQLException {
-		connect();
-		PreparedStatement ps = jdbcConnection.prepareStatement(sqlCreate);
-		ps.setString(1, user.getFirstName());
-		ps.setString(2, user.getLastName());
-		ps.setString(3, user.getLogin());
-		ps.setString(4, user.getEmail());
-		ps.setString(5, user.getPassword());
+		PreparedStatement ps = jdbcConnection.prepareStatement(SQL_STATEMENT_CREATE);
 		
-		boolean rowInserted = ps.executeUpdate() > 0;
-		ps.close();
-		disconnect();
-		
-		return rowInserted;
+		return executeUpdate(ps, user, null, null);
 	}
 	
-	public User readUser(long id) throws SQLException {
-		User user = null;
-		connect();
-		PreparedStatement ps = jdbcConnection.prepareStatement(sqlRead);
-		ps.setLong(1, id);
+	public User readUser(Long id) throws SQLException {
+		PreparedStatement ps = jdbcConnection.prepareStatement(SQL_STATEMENT_READ);
 		
-		ResultSet rs = ps.executeQuery();
-		
-		if(rs.next()) {
-			String firstName = rs.getString("first_name");
-			String lastName = rs.getString("last_name");
-			String login = rs.getString("login");
-			String email = rs.getString("email");
-			String password = rs.getString("password");
-			
-			user = new User(id, firstName, lastName, login, email, password);
-		}
-		
-		rs.close();
-		ps.close();
-		
-		return user;
+		return executeQuery(ps, id);
 	}
 	
 	public boolean updateUser(User user) throws SQLException {
-		connect();
-		PreparedStatement ps = jdbcConnection.prepareStatement(sqlUpdate);
-		ps.setString(1, user.getFirstName());
-		ps.setString(2, user.getLastName());
-		ps.setString(3, user.getLogin());
-		ps.setString(4, user.getEmail());
-		ps.setString(5, user.getPassword());
-		ps.setLong(6, user.getId());
+		PreparedStatement ps = jdbcConnection.prepareStatement(SQL_STATEMENT_UPDATE);
 		
-		boolean rowUpdated = ps.executeUpdate() > 0;
-		ps.close();
-		disconnect();
-		
-		return rowUpdated;
+		return executeUpdate(ps, user, null, true);
 	}
 	
 	public boolean deleteUser(long id) throws SQLException {
-		connect();
-		PreparedStatement ps = jdbcConnection.prepareStatement(sqlDelete);
-		ps.setLong(1, id);
+		PreparedStatement ps = jdbcConnection.prepareStatement(SQL_STATEMENT_DELETE);
 		
-		boolean rowDeleted = ps.executeUpdate() > 0;
-		ps.close();
-		disconnect();
-		
-		return rowDeleted;
+		return executeUpdate(ps, null, id, null);
 	}
 	
 	public List<User> listUser() throws SQLException {
-		List<User> listUser = new ArrayList<>();
-		connect();
 		Statement st = jdbcConnection.createStatement();
-		ResultSet rs = st.executeQuery(sqlList);
 		
-		while(rs.next()) {
-			long id = rs.getLong("id");
-			String firstName = rs.getString("first_name");
-			String lastName = rs.getString("last_name");
-			String login = rs.getString("login");
-			String email = rs.getString("email");
-			String password = rs.getString("password");
+		return executeQuery(st);
+	}
+	
+	private User executeQuery(PreparedStatement ps, Long id) {
+		User user = null;
+		try {
+			connect();
+			ps.setLong(1, id);
+			ResultSet rs = ps.executeQuery();
 			
-			listUser.add(new User(id, firstName, lastName, login, email, password));
+			if(rs.next()) {
+				id = rs.getLong("id");
+				String firstName = rs.getString("first_name");
+				String lastName = rs.getString("last_name");
+				String login = rs.getString("login");
+				String email = rs.getString("email");
+				String password = rs.getString("password");
+				
+				user = new User(id, firstName, lastName, login, email, password);
+			}
+			rs.close();
+		}
+		catch(SQLException ex) {
+			ex.printStackTrace();
+		}
+		finally {
+			try {
+				ps.close();
+				disconnect();
+			}
+			catch(Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+		return user;
+	}
+	
+	private List<User> executeQuery(Statement st) {
+		List<User> list = new ArrayList<>();
+		try {
+			connect();
+			ResultSet rs = st.executeQuery(SQL_STATEMENT_GET_LIST);
+			
+			while(rs.next()) {
+				long id = rs.getLong("id");
+				String firstName = rs.getString("first_name");
+				String lastName = rs.getString("last_name");
+				String login = rs.getString("login");
+				String email = rs.getString("email");
+				String password = rs.getString("password");
+				
+				list.add(new User(id, firstName, lastName, login, email, password));
+			}
+			rs.close();
+		}
+		catch(SQLException ex) {
+			ex.printStackTrace();
+		}
+		finally {
+			try {
+				st.close();
+				disconnect();
+			}
+			catch(Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+		return list;
+	}
+	
+	private Boolean executeUpdate(PreparedStatement ps, User user, Long id, Boolean update) {
+		Boolean row = null;
+		
+		try {
+			connect();
+			
+			if(id == null) {
+				ps.setString(1, user.getFirstName());
+				ps.setString(2, user.getLastName());
+				ps.setString(3, user.getLogin());
+				ps.setString(4, user.getEmail());
+				ps.setString(5, user.getPassword());
+				
+				if(update == true) {
+					ps.setLong(6, user.getId());
+				}
+			}
+			else {
+				ps.setLong(1, id);
+			}
+			
+			row = ps.executeUpdate() > 0;
+		}
+		catch(SQLException ex) {
+			ex.printStackTrace();
+		}
+		finally {
+			try {
+				ps.close();
+				disconnect();
+			}
+			catch(Exception ex) {
+				ex.printStackTrace();
+			}
 		}
 		
-		rs.close();
-		st.close();
-		disconnect();
-		
-		return listUser;
+		return row;
 	}
 }

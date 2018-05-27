@@ -4,8 +4,7 @@ import java.io.Serializable;
 
 public class User implements Serializable {
 	private static final long serialVersionUID = -7198674556101718020L;
-	
-	private long id;
+	private Long id;
 	private String firstName;
 	private String lastName;
 	private String login;
@@ -14,21 +13,17 @@ public class User implements Serializable {
 	
 	public User() {}
 	
-	public User(long id) {
+	public User(Long id, String firstName, String lastName, String login, String email, String password) {
 		this.id = id;
-	}
-	
-	public User(long id, String firstName, String lastName, String login, String email, String password) {
-		this(firstName, lastName, login, email, password);
-		this.id = id;
-	}
-	
-	public User(String firstName, String lastName, String login, String email, String password) {
 		this.firstName = firstName;
 		this.lastName = lastName;
 		this.login = login;
 		this.email = email;
 		this.password = password;
+	}
+	
+	public User(String firstName, String lastName, String login, String email, String password) {
+		this(null, firstName, lastName, login, email, password);
 	}
 
 	public long getId() {
@@ -78,21 +73,4 @@ public class User implements Serializable {
 	public void setPassword(String password) {
 		this.password = password;
 	}
-
-	@Override
-	public String toString() {
-		return "User [id=" + id + ", firstName=" + firstName + ", lastName=" + lastName + ", login=" + login
-				+ ", email=" + email + ", password=" + password + "]";
-	}
-	public String toJson() {
-		return "{"
-				+ "\"id\":" + id
-				+ ", \"firstName\":" + firstName
-				+ ", \"lastName\":" + lastName
-				+ ", \"login\":" + login
-				+ ", \"email\":" + email 
-				+ ", \"password\":" + password
-				+ "}";
-	}
-	
 }
